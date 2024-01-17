@@ -26,5 +26,30 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+
+        $this->renderable(function (CustomException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'status' => false,
+                'data' => $e->getData(),
+            ], $e->getStatusCode());
+        });
+
+        $this->renderable(function (ValidationException $e) {
+            return response()->json([
+                'message' => 'Invalid data was given',
+                'status' => false,
+                "data" => $e->errors()
+            ], 422);
+        });
+
+        $this->renderable(function (AuthenticationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                "status" => false,
+                'data' => null
+            ], 401);
+        });
     }
 }
