@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use stdClass;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -16,7 +17,24 @@ class AuthController extends Controller
             'name' => "required|string",
             "email" => "required|email|unique:users,email",
             "password" => "required|string|min:8",
+            "captchaData" => "required"
         ]);
+
+        $validatedCaptcha = customValidate($request->captchaData, [
+            'number1' => "required|integer|min:10|max:99",
+            "number2" => "required|integer|min:10|max:99",
+            "operator" => ["required", "string", Rule::in(['*', "-", "+", "/"])],
+            "answer" => 'required|integer'
+        ]);
+
+        if (!validateCaptcha(
+            $validatedCaptcha['number1'],
+            $validatedCaptcha['number2'],
+            $validatedCaptcha['operator'],
+            $validatedCaptcha['answer']
+        )) {
+            return $this->error('Captcha validation failed', 400);
+        }
 
         $validatedData['password'] = Hash::make($validatedData['password']);
 
@@ -35,8 +53,25 @@ class AuthController extends Controller
     {
         $validatedData = customValidate($request->all(), [
             'email' => "required|email|exists:users,email",
-            "password" => "required|string|min:8"
+            "password" => "required|string|min:8",
+            "captchaData" => "required"
         ]);
+
+        $validatedCaptcha = customValidate($request->captchaData, [
+            'number1' => "required|integer|min:10|max:99",
+            "number2" => "required|integer|min:10|max:99",
+            "operator" => ["required", "string", Rule::in(['*', "-", "+", "/"])],
+            "answer" => 'required|integer'
+        ]);
+
+        if (!validateCaptcha(
+            $validatedCaptcha['number1'],
+            $validatedCaptcha['number2'],
+            $validatedCaptcha['operator'],
+            $validatedCaptcha['answer']
+        )) {
+            return $this->error('Captcha validation failed', 400);
+        }
 
         $user = User::where("email", $validatedData['email'])->first();
 

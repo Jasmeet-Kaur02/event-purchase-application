@@ -22,3 +22,37 @@ if (!function_exists('validateUserId')) {
         ]);
     }
 }
+
+if (!function_exists('validateCaptcha')) {
+    function validateCaptcha($num1, $num2, $operator, $answer)
+    {
+        $result = 0;
+
+        switch ($operator) {
+            case "+":
+                $result = $num1 + $num2;
+                break;
+
+            case "-":
+                $result = $num1 - $num2;
+                break;
+
+            case "*":
+                $result = $num1 * $num2;
+                break;
+
+            case "/":
+                $result = $num1 / $num2;
+                break;
+
+            default:
+                $result = 0;
+        }
+
+        if ($answer === $result) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
