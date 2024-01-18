@@ -63,7 +63,7 @@ class EventController extends Controller
         $event = Event::find($eventId);
         $event->delete();
 
-        return $this->success(true, "Event has been delete successfully", 200);
+        return $this->success(true, "Event has been deleted successfully", 200);
     }
 
     public function get()
@@ -86,6 +86,10 @@ class EventController extends Controller
         $wallet = $user->wallet;
         $balance = $wallet->balance;
 
+        if($user->events()->where('eventId', $eventId)->exists()) {
+            return $this->error('You are already registered for this event', 400);
+        }
+
         if (($balance / 100) < 5) {
             return $this->error("You don't have a sufficient balance to purchase event", 400);
         }
@@ -94,6 +98,6 @@ class EventController extends Controller
         $wallet->save();
         $user->events()->attach($eventId);
 
-        return $this->success(true, "You have purchased event ticket successfully", 200);
+        return $this->success(true, "Event ticket has been purchased successfully", 200);
     }
 }
