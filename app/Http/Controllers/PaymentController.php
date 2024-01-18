@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use Stripe;
 use Stripe_Customer;
 use Stripe_Charge;
-use Stripe_Token;
-use Stripe\PaymentMethod;
+use Stripe_InvalidRequestError;
+use Stripe_CardError;
 
 use App\Models\User;
 
@@ -21,23 +21,23 @@ class PaymentController extends Controller
         validateUserId($userId);
         $user = User::find($userId);
         $amount = 50 * 100;
-        $errorMessage = "Payment processed failed. Your registration have been cancelled";
+        $errorMessage = "Payment process failed. Your registration has been cancelled";
 
         Stripe::setApiKey(env('STRIPE_SECRET'));
-        $customer = Stripe_Customer::create([
-            "name" => $user->name,
-            'email' => $user->email,
-            'source' => $validatedData['stripeToken']
-        ]);
-
-        if ($customer) {
-            $charge = Stripe_Charge::create([
-                'customer' => $customer->id,
-                'amount' => $amount,
-                'currency' => 'usd',
+        try {
+            $customer = Stripe_Customer::create([
+                "name" => $user->name,
+                'email' => $user->email,
+                'source' => $validatedData['stripeToken']
             ]);
 
-            if ($charge) {
+            try {
+                Stripe_Charge::create([
+                    'customer' => $customer->id,
+                    'amount' => $amount,
+                    'currency' => 'usd',
+                ]);
+
                 $user->isVerified = true;
                 $user->stripeId = $customer->id;
                 $user->save();
@@ -48,45 +48,48 @@ class PaymentController extends Controller
                 $user->wallet()->create([
                     "balance" => 0
                 ]);
-
                 return $this->success(true, "Payment has been completed successfully", 200);
-            } else {
+            } catch (Stripe_CardError | Stripe_InvalidRequestError $e) {
+                $user->tokens()->delete();
                 $user->delete();
                 return $this->error($errorMessage, 400);
             }
-        } else {
+        } catch (Stripe_CardError | Stripe_InvalidRequestError $e) {
+            $user->tokens()->delete();
             $user->delete();
-            return $this->error($errorMessage, 404);
+            return $this->error($errorMessage, 400);
         }
     }
 
     public function chargeWallet(Request $request, $userId)
     {
-
         $validatedData = customValidate($request->all(), [
-            'stripeToken' => "required|string",
             "amount" => "required|integer|min:1"
         ]);
 
         validateUserId($userId);
         $user = User::find($userId);
         $amount = $validatedData['amount'] * 100;
+        $wallet = $user->wallet;
+        $balance = $wallet->balance;
         Stripe::setApiKey(env('STRIPE_SECRET'));
 
-        $charge = Stripe_Charge::create([
-            'customer' => $user->stripeId,
-            'amount' => $amount,
-            'currency' => 'usd',
-        ]);
-
-        if ($charge) {
-            $user->wallet()->update([
-                'balance' => $user->wallet->balance + $amount
+        try {
+            Stripe_Charge::create([
+                'customer' => $user->stripeId,
+                'amount' => $amount,
+                'currency' => 'usd',
             ]);
 
+            $wallet->balance = $balance + $amount;
+            $wallet->save();
+            $user->payment()->create([
+                'amount' => $amount,
+                'type' => 'wallet_charge'
+            ]);
             return $this->success(true, "Amount has been added in the wallet successfully", 200);
-        } else {
-            return $this->error('', 400);
+        } catch (Stripe_CardError | Stripe_InvalidRequestError $e) {
+            return $this->error("Error processing the request. Please try again", 400);
         }
     }
 }

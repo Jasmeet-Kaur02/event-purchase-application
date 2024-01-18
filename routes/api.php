@@ -26,10 +26,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('users/{userId}/events/{eventId}', [EventController::class, 'purchaseEvent']);
 
     Route::post('users/{userId}/charge-wallet', [PaymentController::class, 'chargeWallet']);
+    Route::post('users/{userId}/registration-payment', [PaymentController::class, 'registrationPayment']);
+
+    Route::post('logout', [AuthController::class, 'logout']);
 });
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login'])->name('login');
 Route::post('logout', [AuthController::class, 'logout']);
-
-Route::post('users/{userId}/registration-payment', [PaymentController::class, 'registrationPayment']);
