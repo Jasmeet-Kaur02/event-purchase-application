@@ -7,6 +7,11 @@ use Throwable;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
 use App\Exceptions\CustomException;
+use Stripe_ApiConnectionError;
+use Stripe_ApiError;
+use Stripe_AuthenticationError;
+use Stripe_Error;
+
 
 class Handler extends ExceptionHandler
 {
@@ -53,6 +58,30 @@ class Handler extends ExceptionHandler
                 "status" => false,
                 'data' => null
             ], 401);
+        });
+
+        $this->renderable(function (Stripe_AuthenticationError | Stripe_ApiConnectionError $e) {
+            return response()->json([
+                'message' => "Error processing the request. Please try again",
+                'status' => false,
+                'data' => null,
+            ], 500);
+        });
+
+        $this->renderable(function (Stripe_ApiError $e) {
+            return response()->json([
+                'message' => "Stripe API error. Please try again",
+                'status' => false,
+                'data' => null,
+            ], 500);
+        });
+
+        $this->renderable(function (Stripe_Error $e) {
+            return response()->json([
+                'message' => "An unexpected error occurred. Please try again",
+                'status' => false,
+                'data' => null,
+            ], 500);
         });
     }
 }
