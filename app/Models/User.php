@@ -45,4 +45,19 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function payment()
+    {
+        return $this->hasMany(Payment::class, 'userId');
+    }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class, 'userId');
+    }
+
+    public function events()
+    {
+        return $this->belongsToMany(Event::class, 'userEvents', 'userId', 'eventId');
+    }
 }
